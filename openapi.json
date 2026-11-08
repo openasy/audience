@@ -1,0 +1,4210 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "OpenAsy Audience API",
+    "version": "0.1.0",
+    "summary": "One profile per person from every linked product, and segments that stay up to date.",
+    "description": "Every screen of Audience uses this API, and so can your scripts and the other products (ADR 0014). Within `/api/v1` changes are additive only; anything removed is deprecated first (ADR 0024). Errors use Problem Details (RFC 9457).\n\nPeople are matched only by email, phone number or your own user id, never by device fingerprints. How they are matched, the traits and the linked products are set in the product's file, never through the API. Every operation takes the session of a signed-in person or an API token, and names the role it needs (`x-openasy-role`: viewer, editor, admin; ADR 0003).\n\nThe webhook `erasure` is the call Audience makes to Forms, CRM and Messages when a person is deleted on request.\n\nSign-in, members and API tokens are under `/api/v1/auth`, provided by [@openasy/auth](https://github.com/openasy/auth#routes).",
+    "license": {
+      "name": "AGPL-3.0-only",
+      "identifier": "AGPL-3.0-only"
+    }
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "This Audience"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Events",
+      "description": "What comes in: events and people from Forms, CRM, Messages and your applications."
+    },
+    {
+      "name": "People",
+      "description": "Profiles, their traits and their timelines."
+    },
+    {
+      "name": "Segments",
+      "description": "Rules on traits and events, and what Messages and Campaigns read."
+    },
+    {
+      "name": "Imports",
+      "description": "People from a CSV."
+    },
+    {
+      "name": "Deletions",
+      "description": "Deletion on request, here and in every linked product."
+    },
+    {
+      "name": "Sources",
+      "description": "The linked products."
+    },
+    {
+      "name": "Product",
+      "description": "Version, overview and the file."
+    }
+  ],
+  "paths": {
+    "/api/v1/events": {
+      "post": {
+        "operationId": "recordEvents",
+        "tags": [
+          "Events"
+        ],
+        "summary": "Record events",
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "apiToken": []
+          },
+          {
+            "adminToken": []
+          }
+        ],
+        "description": "The API Forms, CRM, Messages and your own applications post their events to: up to 1000 at once, each matched to a person by email, phone or user id. The batch is checked whole; one event that cannot be read refuses all of them.\n\nNeeds the editor role.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EventBatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Each event's person and whether it was new.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "413": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "x-openasy-role": "editor"
+      }
+    },
+    "/api/v1/profiles": {
+      "post": {
+        "operationId": "upsertProfile",
+        "tags": [
+          "Events"
+        ],
+        "summary": "Add or update a person",
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "apiToken": []
+          },
+          {
+            "adminToken": []
+          }
+        ],
+        "description": "A person and their traits, without an event, matched the same way.\n\nNeeds the editor role.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The person.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "413": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "x-openasy-role": "editor"
+      }
+    },
+    "/api/v1/people": {
+      "get": {
+        "operationId": "listPeople",
+        "tags": [
+          "People"
+        ],
+        "summary": "People",
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "apiToken": []
+          },
+          {
+            "adminToken": []
+          }
+        ],
+        "description": "Needs the viewer role.",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "description": "Part of a name, email, phone number or user id.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "email",
+            "in": "query",
+            "required": false,
+            "description": "Exactly this email.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "phone",
+            "in": "query",
+            "required": false,
+            "description": "Exactly this phone number, in any way it is written.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "query",
+            "required": false,
+            "description": "Exactly this user id.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "trait",
+            "in": "query",
+            "required": false,
+            "description": "name:value, such as plan:Free; case is ignored.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "segment",
+            "in": "query",
+            "required": false,
+            "description": "Only members of this segment at its last count.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "The previous page's nextCursor.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "1 to 500; 100 by default.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Newest activity first.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonList"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "x-openasy-role": "viewer"
+      }
+    },
+    "/api/v1/people/{id}": {
+      "get": {
+        "operationId": "getPerson",
+        "tags": [
+          "People"
+        ],
+        "summary": "A person",
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "apiToken": []
+          },
+          {
+            "adminToken": []
+          }
+        ],
+        "description": "An id of a profile that was joined into another finds the person it is now.\n\nNeeds the viewer role.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The profile, its latest events and its segments.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "x-openasy-role": "viewer"
+      },
+      "delete": {
+        "operationId": "deletePerson",
+        "tags": [
+          "Deletions"
+        ],
+        "summary": "Delete a person on request",
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "apiToken": []
+          },
+          {
+            "adminToken": []
+          }
+        ],
+        "description": "For a request under KVKK Art. 7 and 11 or GDPR Art. 17. Deleted here at once and in every linked product with delete: true; logged in /api/v1/deletions without the person's data.\n\nNeeds the admin role.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "reference",
+            "in": "query",
+            "required": true,
+            "description": "The request's reference, 3 to 100 characters.",
+            "schema": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 100
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Deleted here; the linked products' parts follow.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Deletion"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "x-openasy-role": "admin"
+      }
+    },
+    "/api/v1/people/{id}/events": {
+      "get": {
+        "operationId": "listPersonEvents",
+        "tags": [
+          "People"
+        ],
+        "summary": "A person's timeline",
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "apiToken": []
+          },
+          {
+            "adminToken": []
+          }
+        ],
+        "description": "Needs the viewer role.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "The previous page's nextCursor.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "1 to 500; 100 by default.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Newest first.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventList"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "x-openasy-role": "viewer"
+      }
+    },
+    "/api/v1/people/{id}/consent": {
+      "get": {
+        "operationId": "getPersonConsent",
+        "tags": [
+          "People"
+        ],
+        "summary": "What a person agreed to",
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "apiToken": []
+          },
+          {
+            "adminToken": []
+          }
+        ],
+        "description": "Read from OpenAsy Consent by the person's emails, phone numbers and user id, when Consent is linked.\n\nNeeds the viewer role.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Their latest answers in Consent.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentOfPerson"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "x-openasy-role": "viewer"
+      }
+    },
+    "/api/v1/people/{id}/export": {
+      "get": {
+        "operationId": "exportPerson",
+        "tags": [
+          "People"
+        ],
+        "summary": "Export a person's data",
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "apiToken": []
+          },
+          {
+            "adminToken": []
+          }
+        ],
+        "description": "For a request under KVKK Art. 11 or GDPR Art. 15.\n\nNeeds the admin role.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Everything kept about them.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonExport"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "x-openasy-role": "admin"
+      }
+    },
+    "/api/v1/segments": {
+      "get": {
+        "operationId": "listSegments",
+        "tags": [
+          "Segments"
+        ],
+        "summary": "Segments",
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "apiToken": []
+          },
+          {
+            "adminToken": []
+          }
+        ],
+        "description": "Needs the viewer role.",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SegmentList"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "x-openasy-role": "viewer"
+      },
+      "post": {
+        "operationId": "createSegment",
+        "tags": [
+          "Segments"
+        ],
+        "summary": "Make a segment",
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "apiToken": []
+          },
+          {
+            "adminToken": []
+          }
+        ],
+        "description": "Needs the editor role.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SegmentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Made and counted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SegmentDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "x-openasy-role": "editor"
+      }
+    },
+    "/api/v1/segments/preview": {
+      "post": {
+        "operationId": "previewSegment",
+        "tags": [
+          "Segments"
+        ],
+        "summary": "Count rules without saving",
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "apiToken": []
+          },
+          {
+            "adminToken": []
+          }
+        ],
+        "description": "Needs the viewer role.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RulesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Preview"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "x-openasy-role": "viewer"
+      }
+    },
+    "/api/v1/segments/{id}": {
+      "get": {
+        "operationId": "getSegment",
+        "tags": [
+          "Segments"
+        ],
+        "summary": "A segment",
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "apiToken": []
+          },
+          {
+            "adminToken": []
+          }
+        ],
+        "description": "Needs the viewer role.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "With its size on each of the last 90 days.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SegmentDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "x-openasy-role": "viewer"
+      },
+      "put": {
+        "operationId": "updateSegment",
+        "tags": [
+          "Segments"
+        ],
+        "summary": "Change a segment",
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "apiToken": []
+          },
+          {
+            "adminToken": []
+          }
+        ],
+        "description": "Needs the editor role.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SegmentUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Changed, and counted again when its rules changed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SegmentDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "x-openasy-role": "editor"
+      },
+      "delete": {
+        "operationId": "deleteSegment",
+        "tags": [
+          "Segments"
+        ],
+        "summary": "Delete a segment",
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "apiToken": []
+          },
+          {
+            "adminToken": []
+          }
+        ],
+        "description": "Needs the editor role.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted."
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "x-openasy-role": "editor"
+      }
+    },
+    "/api/v1/segments/{id}/members": {
+      "get": {
+        "operationId": "listSegmentMembers",
+        "tags": [
+          "Segments"
+        ],
+        "summary": "A segment's members",
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "apiToken": []
+          },
+          {
+            "adminToken": []
+          }
+        ],
+        "description": "What Messages and Campaigns read to send to a segment. Evaluated at the moment of the first page, in profile id order; the cursor carries on after the last id. Each read is noted under usedBy. Consent is not checked here: the product that sends checks it.\n\nNeeds the viewer role.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "The previous page's nextCursor.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "1 to 1000; 100 by default.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberList"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "x-openasy-role": "viewer"
+      }
+    },
+    "/api/v1/segments/{id}/export": {
+      "get": {
+        "operationId": "exportSegment",
+        "tags": [
+          "Segments"
+        ],
+        "summary": "Export a segment as CSV",
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "apiToken": []
+          },
+          {
+            "adminToken": []
+          }
+        ],
+        "description": "id, name, email, phone, user_id and every trait in the file. Values a spreadsheet would run as a formula start with an apostrophe.\n\nNeeds the viewer role.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A row per member.",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "x-openasy-role": "viewer"
+      }
+    },
+    "/api/v1/segments/{id}/changes": {
+      "get": {
+        "operationId": "listSegmentChanges",
+        "tags": [
+          "Segments"
+        ],
+        "summary": "Who joined and left",
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "apiToken": []
+          },
+          {
+            "adminToken": []
+          }
+        ],
+        "description": "Oldest first after the cursor, kept 90 days; poll it with the cursor of the last answer to act when someone enters or leaves.\n\nNeeds the viewer role.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "The previous page's nextCursor.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "1 to 1000; 100 by default.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeList"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "x-openasy-role": "viewer"
+      }
+    },
+    "/api/v1/segments/{id}/recount": {
+      "post": {
+        "operationId": "recountSegment",
+        "tags": [
+          "Segments"
+        ],
+        "summary": "Count a segment again now",
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "apiToken": []
+          },
+          {
+            "adminToken": []
+          }
+        ],
+        "description": "Needs the editor role.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SegmentDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "x-openasy-role": "editor"
+      }
+    },
+    "/api/v1/imports": {
+      "get": {
+        "operationId": "listImports",
+        "tags": [
+          "Imports"
+        ],
+        "summary": "Imports",
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "apiToken": []
+          },
+          {
+            "adminToken": []
+          }
+        ],
+        "description": "Needs the viewer role.",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportList"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "x-openasy-role": "viewer"
+      },
+      "post": {
+        "operationId": "uploadImport",
+        "tags": [
+          "Imports"
+        ],
+        "summary": "Upload a CSV",
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "apiToken": []
+          },
+          {
+            "adminToken": []
+          }
+        ],
+        "description": "The file is kept until it is imported or discarded. Commas, semicolons and tabs are read, with a header line. Up to 20 MiB and 100,000 rows.\n\nNeeds the editor role.",
+        "parameters": [
+          {
+            "name": "file",
+            "in": "query",
+            "required": false,
+            "description": "The file's name, for the list of imports.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "text/csv": {
+              "schema": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Its columns, the first value of each and the mapping offered.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Import"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "413": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "x-openasy-role": "editor"
+      }
+    },
+    "/api/v1/imports/{id}": {
+      "get": {
+        "operationId": "getImport",
+        "tags": [
+          "Imports"
+        ],
+        "summary": "An import",
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "apiToken": []
+          },
+          {
+            "adminToken": []
+          }
+        ],
+        "description": "Needs the viewer role.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Import"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "x-openasy-role": "viewer"
+      },
+      "delete": {
+        "operationId": "discardImport",
+        "tags": [
+          "Imports"
+        ],
+        "summary": "Discard an uploaded file",
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "apiToken": []
+          },
+          {
+            "adminToken": []
+          }
+        ],
+        "description": "Needs the editor role.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Discarded."
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "x-openasy-role": "editor"
+      }
+    },
+    "/api/v1/imports/{id}/preview": {
+      "post": {
+        "operationId": "previewImport",
+        "tags": [
+          "Imports"
+        ],
+        "summary": "What an import would do",
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "apiToken": []
+          },
+          {
+            "adminToken": []
+          }
+        ],
+        "description": "Needs the editor role.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MappingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportPreview"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "x-openasy-role": "editor"
+      }
+    },
+    "/api/v1/imports/{id}/run": {
+      "post": {
+        "operationId": "runImport",
+        "tags": [
+          "Imports"
+        ],
+        "summary": "Import the file",
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "apiToken": []
+          },
+          {
+            "adminToken": []
+          }
+        ],
+        "description": "Rows are matched to people here; a row without anything to match by is skipped. The file is deleted afterwards; the counts stay.\n\nNeeds the editor role.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MappingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Import"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "x-openasy-role": "editor"
+      }
+    },
+    "/api/v1/deletions": {
+      "get": {
+        "operationId": "listDeletions",
+        "tags": [
+          "Deletions"
+        ],
+        "summary": "Deletion requests",
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "apiToken": []
+          },
+          {
+            "adminToken": []
+          }
+        ],
+        "description": "The log: references, times, who recorded them and how much was deleted where. Nobody's data.\n\nNeeds the viewer role.",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "The previous page's nextCursor.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "1 to 500; 100 by default.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Newest first.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletionList"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "x-openasy-role": "viewer"
+      },
+      "post": {
+        "operationId": "requestDeletion",
+        "tags": [
+          "Deletions"
+        ],
+        "summary": "Delete a person on request",
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "apiToken": []
+          },
+          {
+            "adminToken": []
+          }
+        ],
+        "description": "By profile id, or by identifiers, also for someone who has no profile here but may have one in a linked product.\n\nNeeds the admin role.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeletionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Deleted here; the linked products' parts follow.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Deletion"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "x-openasy-role": "admin"
+      }
+    },
+    "/api/v1/deletions/{id}": {
+      "get": {
+        "operationId": "getDeletion",
+        "tags": [
+          "Deletions"
+        ],
+        "summary": "A deletion request",
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "apiToken": []
+          },
+          {
+            "adminToken": []
+          }
+        ],
+        "description": "Needs the viewer role.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Deletion"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "x-openasy-role": "viewer"
+      }
+    },
+    "/api/v1/deletions/{id}/retry": {
+      "post": {
+        "operationId": "retryDeletion",
+        "tags": [
+          "Deletions"
+        ],
+        "summary": "Try the linked products again now",
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "apiToken": []
+          },
+          {
+            "adminToken": []
+          }
+        ],
+        "description": "After a token or an address was fixed.\n\nNeeds the admin role.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Deletion"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "x-openasy-role": "admin"
+      }
+    },
+    "/api/v1/sources": {
+      "get": {
+        "operationId": "listSources",
+        "tags": [
+          "Sources"
+        ],
+        "summary": "Linked products",
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "apiToken": []
+          },
+          {
+            "adminToken": []
+          }
+        ],
+        "description": "Needs the viewer role.",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceList"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "x-openasy-role": "viewer"
+      }
+    },
+    "/api/v1/sources/analytics/pull": {
+      "post": {
+        "operationId": "pullAnalytics",
+        "tags": [
+          "Sources"
+        ],
+        "summary": "Read Analytics now",
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "apiToken": []
+          },
+          {
+            "adminToken": []
+          }
+        ],
+        "description": "Needs the admin role.",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PullResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "x-openasy-role": "admin"
+      }
+    },
+    "/api/v1/config": {
+      "get": {
+        "operationId": "getConfig",
+        "tags": [
+          "Product"
+        ],
+        "summary": "The file as applied",
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "apiToken": []
+          },
+          {
+            "adminToken": []
+          }
+        ],
+        "description": "Needs the viewer role.",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Config"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "x-openasy-role": "viewer"
+      }
+    },
+    "/api/v1/summary": {
+      "get": {
+        "operationId": "getSummary",
+        "tags": [
+          "Product"
+        ],
+        "summary": "Overview",
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "apiToken": []
+          },
+          {
+            "adminToken": []
+          }
+        ],
+        "description": "Needs the viewer role.",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Summary"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "x-openasy-role": "viewer"
+      }
+    },
+    "/api/v1/products": {
+      "get": {
+        "operationId": "listProducts",
+        "tags": [
+          "Product"
+        ],
+        "summary": "The install's other products",
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "apiToken": []
+          },
+          {
+            "adminToken": []
+          }
+        ],
+        "description": "Needs the viewer role.",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductList"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "x-openasy-role": "viewer"
+      }
+    },
+    "/api/v1/version": {
+      "get": {
+        "operationId": "getVersion",
+        "tags": [
+          "Product"
+        ],
+        "summary": "Version",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Version"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/healthz": {
+      "get": {
+        "operationId": "liveness",
+        "tags": [
+          "Product"
+        ],
+        "summary": "Liveness",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "The process is running.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Status"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/readyz": {
+      "get": {
+        "operationId": "readiness",
+        "tags": [
+          "Product"
+        ],
+        "summary": "Readiness",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "The database answers.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Status"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The database does not answer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Status"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/metrics": {
+      "get": {
+        "operationId": "metrics",
+        "tags": [
+          "Product"
+        ],
+        "summary": "Prometheus metrics",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Metrics in the Prometheus text format.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "webhooks": {
+    "erasure": {
+      "post": {
+        "operationId": "erasure",
+        "summary": "Delete a person in a linked product",
+        "description": "Audience calls `POST {url}/api/v1/erasures` on Forms, CRM and Messages, with the product's token from the file, when a person is deleted on request. Answer 200 with status done once they are deleted, or 202 with status waiting and a detail while the product must keep them (an unpaid invoice, a legal hold); Audience asks again every hour with the same reference. A 401 or 403 stops it until someone fixes the token; anything 5xx is tried again later.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ErasureRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Deleted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErasureAnswer"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Kept for now; detail says why.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErasureAnswer"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "session": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Host-openasy-session",
+        "description": "The browser session after signing in (`openasy-session` when Audience runs on plain http://localhost). Requests that change something must come from the Audience origin."
+      },
+      "apiToken": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "An API token created under Settings, API tokens (`oa_audience_...`): one role, always an expiry (ADR 0003)."
+      },
+      "adminToken": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Only when Audience is started by its tests or a local script: one shared token with the admin role. A production install does not have it."
+      }
+    },
+    "responses": {
+      "Problem": {
+        "description": "An error, as RFC 9457 Problem Details.",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "Problem": {
+        "type": "object",
+        "required": [
+          "type",
+          "title",
+          "status",
+          "code"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "format": "uri"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer"
+          },
+          "code": {
+            "type": "string",
+            "enum": [
+              "invalid-json",
+              "invalid-body",
+              "not-found",
+              "conflict",
+              "not-configured",
+              "payload-too-large",
+              "upstream-error",
+              "internal-error",
+              "unauthenticated",
+              "invalid-credentials",
+              "invalid-token",
+              "mfa-required",
+              "mfa-setup-required",
+              "forbidden",
+              "cross-site",
+              "rate-limited"
+            ],
+            "description": "Stable; match on this."
+          },
+          "detail": {
+            "type": "string"
+          }
+        }
+      },
+      "Status": {
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "Version": {
+        "type": "object",
+        "required": [
+          "product",
+          "version"
+        ],
+        "properties": {
+          "product": {
+            "const": "audience"
+          },
+          "version": {
+            "type": "string"
+          }
+        }
+      },
+      "ProductList": {
+        "type": "object",
+        "required": [
+          "products"
+        ],
+        "properties": {
+          "products": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "url"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "url": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "ConfigFile": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "required": [
+          "path",
+          "appliedAt",
+          "traits",
+          "sources",
+          "error"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "appliedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "traits": {
+            "type": "integer"
+          },
+          "sources": {
+            "type": "integer"
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "description": "The file and whether it is applied; null before it was first read."
+      },
+      "Source": {
+        "type": "object",
+        "required": [
+          "id",
+          "url",
+          "token",
+          "delete",
+          "events7d"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "enum": [
+              "analytics",
+              "consent",
+              "forms",
+              "crm",
+              "messages"
+            ]
+          },
+          "url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Where Audience calls it: the file's url, or the product's address in OPENASY_PRODUCTS."
+          },
+          "token": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "required": [
+              "variable",
+              "set"
+            ],
+            "properties": {
+              "variable": {
+                "type": "string"
+              },
+              "set": {
+                "type": "boolean"
+              }
+            },
+            "description": "The environment variable the token is read from, and whether it is set."
+          },
+          "delete": {
+            "type": "boolean",
+            "description": "People deleted on request here are deleted there too."
+          },
+          "pull": {
+            "type": "integer",
+            "description": "Analytics: minutes between two reads."
+          },
+          "sites": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "site",
+                "lastAt",
+                "lastOkAt",
+                "error",
+                "events"
+              ],
+              "properties": {
+                "site": {
+                  "type": "string"
+                },
+                "lastAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "lastOkAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "error": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "events": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "events7d": {
+            "type": "integer",
+            "description": "Events from it in the last 7 days."
+          }
+        }
+      },
+      "SourceList": {
+        "type": "object",
+        "required": [
+          "sources"
+        ],
+        "properties": {
+          "sources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Source"
+            }
+          }
+        }
+      },
+      "PullResult": {
+        "type": "object",
+        "required": [
+          "events",
+          "sites"
+        ],
+        "properties": {
+          "events": {
+            "type": "integer",
+            "description": "Events added by this read."
+          },
+          "sites": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "site",
+                "lastAt",
+                "lastOkAt",
+                "error",
+                "events"
+              ],
+              "properties": {
+                "site": {
+                  "type": "string"
+                },
+                "lastAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "lastOkAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "error": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "events": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        }
+      },
+      "Trait": {
+        "type": "object",
+        "required": [
+          "key",
+          "type",
+          "values",
+          "from"
+        ],
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "string",
+              "number",
+              "boolean",
+              "date"
+            ]
+          },
+          "values": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "from": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string",
+              "enum": [
+                "analytics",
+                "forms",
+                "crm",
+                "messages",
+                "import",
+                "api"
+              ]
+            }
+          }
+        }
+      },
+      "Config": {
+        "type": "object",
+        "required": [
+          "file",
+          "text",
+          "matchBy",
+          "phoneCountry",
+          "traits",
+          "keepDays",
+          "recountMinutes",
+          "sources"
+        ],
+        "properties": {
+          "file": {
+            "$ref": "#/components/schemas/ConfigFile"
+          },
+          "text": {
+            "type": "string",
+            "description": "The file as applied."
+          },
+          "matchBy": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "email",
+                "phone",
+                "user_id"
+              ]
+            }
+          },
+          "phoneCountry": {
+            "type": "string"
+          },
+          "traits": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Trait"
+            }
+          },
+          "keepDays": {
+            "type": "integer"
+          },
+          "recountMinutes": {
+            "type": "integer",
+            "description": "1440 for once a night."
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Source"
+            }
+          }
+        }
+      },
+      "Summary": {
+        "type": "object",
+        "required": [
+          "profiles",
+          "new30d",
+          "trend",
+          "knownBy",
+          "mergedThisMonth",
+          "eventsToday",
+          "events",
+          "firstSources",
+          "file",
+          "segments",
+          "deletions",
+          "sources"
+        ],
+        "properties": {
+          "profiles": {
+            "type": "integer"
+          },
+          "new30d": {
+            "type": "integer"
+          },
+          "trend": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "Profiles there are now, at the end of each of the last 14 days."
+          },
+          "knownBy": {
+            "type": "object",
+            "required": [
+              "email",
+              "phone",
+              "userId"
+            ],
+            "properties": {
+              "email": {
+                "type": "integer"
+              },
+              "phone": {
+                "type": "integer"
+              },
+              "userId": {
+                "type": "integer"
+              }
+            }
+          },
+          "mergedThisMonth": {
+            "type": "integer"
+          },
+          "eventsToday": {
+            "type": "integer"
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "day",
+                "sources"
+              ],
+              "properties": {
+                "day": {
+                  "type": "string"
+                },
+                "sources": {
+                  "type": "object",
+                  "required": [
+                    "analytics",
+                    "forms",
+                    "crm",
+                    "messages",
+                    "import",
+                    "api"
+                  ],
+                  "properties": {
+                    "analytics": {
+                      "type": "integer"
+                    },
+                    "forms": {
+                      "type": "integer"
+                    },
+                    "crm": {
+                      "type": "integer"
+                    },
+                    "messages": {
+                      "type": "integer"
+                    },
+                    "import": {
+                      "type": "integer"
+                    },
+                    "api": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "firstSources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "source",
+                "profiles"
+              ],
+              "properties": {
+                "source": {
+                  "type": "string",
+                  "enum": [
+                    "analytics",
+                    "forms",
+                    "crm",
+                    "messages",
+                    "import",
+                    "api"
+                  ]
+                },
+                "profiles": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "file": {
+            "$ref": "#/components/schemas/ConfigFile"
+          },
+          "segments": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "name",
+                "size",
+                "change30d",
+                "usedBy"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "size": {
+                  "type": "integer"
+                },
+                "change30d": {
+                  "type": "integer"
+                },
+                "usedBy": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "deletions": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "description": "Deletions with a linked product's part pending, waiting, done or failed."
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Source"
+            }
+          }
+        }
+      },
+      "PersonInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "At least one of the identifiers the file matches by. Emails are lowercased, phone numbers written as +905551112233.",
+        "properties": {
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "phone": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "userId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "Person": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "email",
+          "phone",
+          "userId",
+          "emails",
+          "phones",
+          "traits",
+          "sources",
+          "firstSource",
+          "createdAt",
+          "lastAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The first email; every one is in emails."
+          },
+          "phone": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "userId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "emails": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "phones": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "traits": {
+            "type": "object",
+            "additionalProperties": {
+              "type": [
+                "string",
+                "number",
+                "boolean"
+              ]
+            },
+            "description": "Trait names and values, as the file declares them."
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "analytics",
+                "forms",
+                "crm",
+                "messages",
+                "import",
+                "api"
+              ]
+            }
+          },
+          "firstSource": {
+            "type": "string",
+            "enum": [
+              "analytics",
+              "forms",
+              "crm",
+              "messages",
+              "import",
+              "api"
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "lastAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "Event": {
+        "type": "object",
+        "required": [
+          "id",
+          "source",
+          "type",
+          "at",
+          "text",
+          "properties"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "analytics",
+              "forms",
+              "crm",
+              "messages",
+              "import",
+              "api"
+            ]
+          },
+          "type": {
+            "type": "string"
+          },
+          "at": {
+            "type": "string"
+          },
+          "text": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "properties": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        }
+      },
+      "PersonDetail": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Person"
+          },
+          {
+            "type": "object",
+            "required": [
+              "mergedFrom",
+              "events",
+              "eventCount",
+              "segments"
+            ],
+            "properties": {
+              "mergedFrom": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Ids of profiles that turned out to be this person."
+              },
+              "events": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Event"
+                },
+                "description": "The latest 50, newest first; the rest at /api/v1/people/{id}/events."
+              },
+              "nextCursor": {
+                "type": "string"
+              },
+              "eventCount": {
+                "type": "integer"
+              },
+              "segments": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "name"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "description": "The segments the person meets now."
+              }
+            }
+          }
+        ]
+      },
+      "PersonList": {
+        "type": "object",
+        "required": [
+          "people",
+          "total"
+        ],
+        "properties": {
+          "people": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Person"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "description": "How many match, on every page."
+          },
+          "nextCursor": {
+            "type": "string"
+          }
+        }
+      },
+      "EventList": {
+        "type": "object",
+        "required": [
+          "events"
+        ],
+        "properties": {
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Event"
+            }
+          },
+          "nextCursor": {
+            "type": "string"
+          }
+        }
+      },
+      "PersonExport": {
+        "type": "object",
+        "required": [
+          "exportedAt",
+          "person",
+          "events",
+          "analyticsVisitors"
+        ],
+        "properties": {
+          "exportedAt": {
+            "type": "string"
+          },
+          "person": {
+            "$ref": "#/components/schemas/Person"
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Event"
+            }
+          },
+          "analyticsVisitors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "site",
+                "visitor"
+              ],
+              "properties": {
+                "site": {
+                  "type": "string"
+                },
+                "visitor": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "ConsentOfPerson": {
+        "type": "object",
+        "required": [
+          "linked",
+          "people",
+          "error"
+        ],
+        "properties": {
+          "linked": {
+            "type": "boolean",
+            "description": "Whether Consent is linked in the file."
+          },
+          "people": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "standing"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "The person's id in Consent."
+                },
+                "standing": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "purpose",
+                      "channel",
+                      "status",
+                      "allowed",
+                      "version",
+                      "at",
+                      "source"
+                    ],
+                    "properties": {
+                      "purpose": {
+                        "type": "string"
+                      },
+                      "channel": {
+                        "type": "string"
+                      },
+                      "status": {
+                        "type": "string"
+                      },
+                      "allowed": {
+                        "type": "boolean"
+                      },
+                      "version": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ]
+                      },
+                      "at": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "source": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Why Consent could not be asked."
+          }
+        }
+      },
+      "EventInput": {
+        "type": "object",
+        "required": [
+          "type",
+          "person"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": [
+              "api",
+              "forms",
+              "crm",
+              "messages"
+            ],
+            "default": "api",
+            "description": "forms, crm and messages only once linked under sources in the file."
+          },
+          "type": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_.:-]{0,63}$",
+            "description": "What happened, such as form_submitted, deal_opened or message_opened."
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When it happened; now by default. At most a day ahead."
+          },
+          "id": {
+            "type": "string",
+            "maxLength": 200,
+            "description": "The source's own id for the event: the same id from the same source is kept once."
+          },
+          "person": {
+            "$ref": "#/components/schemas/PersonInput"
+          },
+          "traits": {
+            "type": "object",
+            "description": "Traits to set as of at; null removes one. Traits the file does not declare, or does not take from this source, are left out and listed in ignoredTraits."
+          },
+          "properties": {
+            "type": "object",
+            "description": "Up to 4096 bytes of JSON. Segments compare its top-level values."
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 300,
+            "description": "How the timeline says it."
+          }
+        }
+      },
+      "EventBatch": {
+        "type": "object",
+        "required": [
+          "events"
+        ],
+        "properties": {
+          "events": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 1000,
+            "items": {
+              "$ref": "#/components/schemas/EventInput"
+            }
+          }
+        }
+      },
+      "Resolved": {
+        "type": "object",
+        "required": [
+          "profile",
+          "created",
+          "merged",
+          "conflicts"
+        ],
+        "properties": {
+          "profile": {
+            "type": "string",
+            "description": "The person's profile id now."
+          },
+          "created": {
+            "type": "boolean"
+          },
+          "merged": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Profiles joined into it: they shared an email, a phone number or the user id."
+          },
+          "conflicts": {
+            "type": "integer",
+            "description": "Identifiers given that belong to someone with another user id, so they were not added."
+          }
+        }
+      },
+      "IgnoredTrait": {
+        "type": "object",
+        "required": [
+          "trait",
+          "reason"
+        ],
+        "properties": {
+          "trait": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "IngestResult": {
+        "type": "object",
+        "required": [
+          "recorded",
+          "duplicates",
+          "results"
+        ],
+        "properties": {
+          "recorded": {
+            "type": "integer"
+          },
+          "duplicates": {
+            "type": "integer"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Resolved"
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "event",
+                    "duplicate",
+                    "ignoredTraits"
+                  ],
+                  "properties": {
+                    "event": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "duplicate": {
+                      "type": "boolean"
+                    },
+                    "ignoredTraits": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/IgnoredTrait"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      "ProfileRequest": {
+        "type": "object",
+        "required": [
+          "person"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "person": {
+            "$ref": "#/components/schemas/PersonInput"
+          },
+          "traits": {
+            "type": "object"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "api",
+              "forms",
+              "crm",
+              "messages"
+            ]
+          }
+        }
+      },
+      "ProfileResult": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Resolved"
+          },
+          {
+            "type": "object",
+            "required": [
+              "ignoredTraits",
+              "person"
+            ],
+            "properties": {
+              "ignoredTraits": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/IgnoredTrait"
+                }
+              },
+              "person": {
+                "$ref": "#/components/schemas/Person"
+              }
+            }
+          }
+        ]
+      },
+      "Condition": {
+        "description": "A group (all: every condition holds; any: at least one does), a trait compared with a value, a count of events of a type ever or in the last days days, or whether the person has an identifier.",
+        "anyOf": [
+          {
+            "type": "object",
+            "required": [
+              "all"
+            ],
+            "properties": {
+              "all": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "$ref": "#/components/schemas/Condition"
+                }
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "any"
+            ],
+            "properties": {
+              "any": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "$ref": "#/components/schemas/Condition"
+                }
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "trait",
+              "op"
+            ],
+            "properties": {
+              "trait": {
+                "type": "string"
+              },
+              "op": {
+                "type": "string",
+                "enum": [
+                  "is",
+                  "is_not",
+                  "in",
+                  "not_in",
+                  "contains",
+                  "exists",
+                  "missing",
+                  "gt",
+                  "gte",
+                  "lt",
+                  "lte",
+                  "before",
+                  "after",
+                  "within_last",
+                  "within_next"
+                ]
+              },
+              "value": {
+                "type": [
+                  "string",
+                  "number",
+                  "boolean",
+                  "array"
+                ]
+              },
+              "days": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 3650
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "event",
+              "op"
+            ],
+            "properties": {
+              "event": {
+                "type": "string"
+              },
+              "op": {
+                "type": "string",
+                "enum": [
+                  "at_least",
+                  "at_most",
+                  "exactly",
+                  "none"
+                ]
+              },
+              "count": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000
+              },
+              "days": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 1,
+                "maximum": 3650
+              },
+              "source": {
+                "type": "string",
+                "enum": [
+                  "analytics",
+                  "forms",
+                  "crm",
+                  "messages",
+                  "import",
+                  "api"
+                ]
+              },
+              "where": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean"
+                  ]
+                }
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "identifier",
+              "op"
+            ],
+            "properties": {
+              "identifier": {
+                "type": "string",
+                "enum": [
+                  "email",
+                  "phone",
+                  "user_id"
+                ]
+              },
+              "op": {
+                "type": "string",
+                "enum": [
+                  "exists",
+                  "missing"
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      },
+      "Segment": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "description",
+          "rules",
+          "owner",
+          "createdAt",
+          "updatedAt",
+          "size",
+          "change30d",
+          "countedAt",
+          "period",
+          "usedBy"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "rules": {
+            "$ref": "#/components/schemas/Condition"
+          },
+          "owner": {
+            "type": "string",
+            "description": "Who made it: a member's email or token:<name>."
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer",
+            "description": "People in it at the last count; it follows events as they come in."
+          },
+          "change30d": {
+            "type": "integer"
+          },
+          "countedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "period": {
+            "type": "boolean",
+            "description": "Its rules have a period, so people leave it as days pass; counted again on a timer."
+          },
+          "usedBy": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Who read its members in the last 30 days, such as token:messages."
+          }
+        }
+      },
+      "SegmentDetail": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Segment"
+          },
+          {
+            "type": "object",
+            "required": [
+              "history",
+              "readers"
+            ],
+            "properties": {
+              "history": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "day",
+                    "size"
+                  ],
+                  "properties": {
+                    "day": {
+                      "type": "string"
+                    },
+                    "size": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              },
+              "readers": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "actor",
+                    "lastAt",
+                    "reads"
+                  ],
+                  "properties": {
+                    "actor": {
+                      "type": "string"
+                    },
+                    "lastAt": {
+                      "type": "string"
+                    },
+                    "reads": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "SegmentList": {
+        "type": "object",
+        "required": [
+          "segments"
+        ],
+        "properties": {
+          "segments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Segment"
+            }
+          }
+        }
+      },
+      "SegmentRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "rules"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "rules": {
+            "$ref": "#/components/schemas/Condition"
+          }
+        }
+      },
+      "SegmentUpdate": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "rules": {
+            "$ref": "#/components/schemas/Condition"
+          }
+        }
+      },
+      "RulesRequest": {
+        "type": "object",
+        "required": [
+          "rules"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "rules": {
+            "$ref": "#/components/schemas/Condition"
+          }
+        }
+      },
+      "Member": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "email",
+          "phone",
+          "userId",
+          "emails",
+          "phones",
+          "traits"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "phone": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "userId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "emails": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "phones": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "traits": {
+            "type": "object",
+            "additionalProperties": {
+              "type": [
+                "string",
+                "number",
+                "boolean"
+              ]
+            },
+            "description": "Trait names and values, as the file declares them."
+          }
+        }
+      },
+      "Preview": {
+        "type": "object",
+        "required": [
+          "size",
+          "sample",
+          "ms"
+        ],
+        "properties": {
+          "size": {
+            "type": "integer"
+          },
+          "sample": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Member"
+            }
+          },
+          "ms": {
+            "type": "integer",
+            "description": "How long the count took."
+          }
+        }
+      },
+      "MemberList": {
+        "type": "object",
+        "required": [
+          "segment",
+          "name",
+          "members"
+        ],
+        "properties": {
+          "segment": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Member"
+            }
+          },
+          "nextCursor": {
+            "type": "string"
+          }
+        }
+      },
+      "ChangeList": {
+        "type": "object",
+        "required": [
+          "segment",
+          "changes",
+          "cursor"
+        ],
+        "properties": {
+          "segment": {
+            "type": "string"
+          },
+          "changes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "profile",
+                "change",
+                "at"
+              ],
+              "properties": {
+                "profile": {
+                  "type": "string"
+                },
+                "change": {
+                  "type": "string",
+                  "enum": [
+                    "joined",
+                    "left"
+                  ]
+                },
+                "at": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Pass it back to read only what changed since; given on every page, empty or not."
+          }
+        }
+      },
+      "Import": {
+        "type": "object",
+        "required": [
+          "id",
+          "file",
+          "actor",
+          "uploadedAt",
+          "rows",
+          "state",
+          "columns",
+          "mapping",
+          "created",
+          "matched",
+          "skipped",
+          "doneAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "file": {
+            "type": "string"
+          },
+          "actor": {
+            "type": "string"
+          },
+          "uploadedAt": {
+            "type": "string"
+          },
+          "rows": {
+            "type": "integer"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "uploaded",
+              "done",
+              "discarded"
+            ]
+          },
+          "columns": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "name",
+                "sample",
+                "suggested"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "sample": {
+                  "type": "string",
+                  "description": "The first value in the column."
+                },
+                "suggested": {
+                  "type": "string",
+                  "description": "email, phone, user_id, name, trait:<name> or skip."
+                }
+              }
+            }
+          },
+          "mapping": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "created": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "matched": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "skipped": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "doneAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "ImportList": {
+        "type": "object",
+        "required": [
+          "imports"
+        ],
+        "properties": {
+          "imports": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Import"
+            }
+          }
+        }
+      },
+      "MappingRequest": {
+        "type": "object",
+        "required": [
+          "mapping"
+        ],
+        "properties": {
+          "mapping": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Each column to email, phone, user_id, name, trait:<name> or skip. At least one column to match by."
+          }
+        }
+      },
+      "ImportPreview": {
+        "type": "object",
+        "required": [
+          "rows",
+          "created",
+          "matched",
+          "skipped",
+          "problems"
+        ],
+        "properties": {
+          "rows": {
+            "type": "integer"
+          },
+          "created": {
+            "type": "integer"
+          },
+          "matched": {
+            "type": "integer"
+          },
+          "skipped": {
+            "type": "integer"
+          },
+          "problems": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "row",
+                "reason"
+              ],
+              "properties": {
+                "row": {
+                  "type": "integer"
+                },
+                "reason": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "The first 20 rows with a value that could not be read; row 2 is the first after the header."
+          }
+        }
+      },
+      "DeletionTask": {
+        "type": "object",
+        "required": [
+          "product",
+          "state",
+          "attempts",
+          "detail",
+          "deleted",
+          "doneAt",
+          "nextAt"
+        ],
+        "properties": {
+          "product": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "waiting",
+              "done",
+              "failed"
+            ],
+            "description": "waiting: the product keeps the person for now and is asked again every hour; failed: it needs someone to act, see detail."
+          },
+          "attempts": {
+            "type": "integer"
+          },
+          "detail": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "deleted": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "doneAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "nextAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "Deletion": {
+        "type": "object",
+        "required": [
+          "id",
+          "reference",
+          "at",
+          "actor",
+          "profiles",
+          "events",
+          "state",
+          "products"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "reference": {
+            "type": "string"
+          },
+          "at": {
+            "type": "string"
+          },
+          "actor": {
+            "type": "string"
+          },
+          "profiles": {
+            "type": "integer",
+            "description": "Profiles deleted here."
+          },
+          "events": {
+            "type": "integer",
+            "description": "Events deleted here."
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "waiting",
+              "done",
+              "failed"
+            ]
+          },
+          "products": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeletionTask"
+            }
+          }
+        }
+      },
+      "DeletionList": {
+        "type": "object",
+        "required": [
+          "deletions"
+        ],
+        "properties": {
+          "deletions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Deletion"
+            }
+          },
+          "nextCursor": {
+            "type": "string"
+          }
+        }
+      },
+      "DeletionRequest": {
+        "type": "object",
+        "required": [
+          "reference"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "reference": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 100,
+            "description": "The request's own reference, such as KVKK-2026-031."
+          },
+          "profile": {
+            "type": "string"
+          },
+          "person": {
+            "$ref": "#/components/schemas/PersonInput"
+          }
+        },
+        "description": "The person by profile, or by person: every profile with any of the identifiers is deleted, and they are passed to the linked products."
+      },
+      "ErasureRequest": {
+        "type": "object",
+        "required": [
+          "reference",
+          "product",
+          "people"
+        ],
+        "properties": {
+          "reference": {
+            "type": "string"
+          },
+          "product": {
+            "const": "audience"
+          },
+          "people": {
+            "type": "object",
+            "required": [
+              "emails",
+              "phones",
+              "userIds"
+            ],
+            "properties": {
+              "emails": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "phones": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "userIds": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "ErasureAnswer": {
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "done",
+              "waiting"
+            ]
+          },
+          "deleted": {
+            "type": "integer"
+          },
+          "detail": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

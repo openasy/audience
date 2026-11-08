@@ -1,0 +1,40 @@
+# Audience. How people are matched, the traits and the linked products are set in audience.yaml.
+#
+#   openssl rand -hex 32 > openasy-kek   # audience's key: sign-in secrets (ADR 0021). Keep it with your backups
+#   docker compose up -d
+#   docker compose logs audience | grep 'no owner yet'   # the one-time link that creates the owner account
+services:
+  audience:
+    image: ghcr.io/openasy/audience:0.1.0
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    tmpfs: [/tmp]
+    ports:
+      - "127.0.0.1:8080:8080" # UI and API; put a TLS proxy in front
+    volumes:
+      - audience-data:/data # SQLite database: profiles, events, segments, the deletion log
+      - ./config:/config:ro # audience.yaml; mount the folder so an editor's save reaches it
+    secrets:
+      - openasy-kek # mounted at /run/secrets/openasy-kek
+    environment:
+      # The address people open Audience at; with a TLS proxy, its https:// URL.
+      AUDIENCE_PUBLIC_URL: ${AUDIENCE_PUBLIC_URL:-http://localhost:8080}
+      AUDIENCE_CONFIG: /config/audience.yaml
+      # The tokens the file's sources name, each an API token made in that product:
+      # AUDIENCE_ANALYTICS_TOKEN: ${AUDIENCE_ANALYTICS_TOKEN}
+      # AUDIENCE_CONSENT_TOKEN: ${AUDIENCE_CONSENT_TOKEN}
+      # The install's other products, for the product switcher, and where sources without a url in the file are called:
+      # OPENASY_PRODUCTS: analytics=https://analytics.example.com,consent=https://consent.example.com
+      # Sign in with your identity provider (OIDC), see the README:
+      # OPENASY_OIDC_ISSUER: https://login.example.com
+      # OPENASY_OIDC_CLIENT_ID: audience
+      # OPENASY_OIDC_CLIENT_SECRET: ${OPENASY_OIDC_CLIENT_SECRET}
+
+volumes:
+  audience-data:
+
+secrets:
+  openasy-kek:
+    file: ./openasy-kek

@@ -1,0 +1,31 @@
+# How Audience matches people, the traits it keeps and the products it is linked to. This file is the only place they
+# are set; a change is picked up within a minute, and a file with a mistake leaves the last good one in place.
+#
+# Two records are one person when they share an email, a phone number or your user id, and only then.
+match_by: [email, phone, user_id] # never device fingerprints, never IP addresses
+phone_country: TR # numbers written without a country code, such as 0555 111 22 33, are +90
+
+traits:
+  plan: { values: [Free, Pro, Business], from: [api, crm, import] }
+  city: { from: [forms, import, api] }
+  sector: { from: [crm, forms, import] }
+  company: {}
+  renewal_date: { type: date, from: [crm, api] }
+
+# The linked products. token names the environment variable that holds that product's API token, never the token.
+# url is where Audience calls it; without it, the product's address in OPENASY_PRODUCTS.
+sources:
+  analytics:
+    token: AUDIENCE_ANALYTICS_TOKEN # an admin token of Analytics: it reads visits and deletes visitors
+    sites: [shop] # identified visitors of these sites become profiles
+  consent:
+    token: AUDIENCE_CONSENT_TOKEN # an admin token of Consent: profiles show what people agreed to; deletions reach it
+  # forms: true                          # Forms sends its events; nothing is deleted there
+  # crm: { token: AUDIENCE_CRM_TOKEN }   # CRM sends its events, and people deleted here are deleted there
+  # messages: { token: AUDIENCE_MESSAGES_TOKEN }
+
+events:
+  keep: 25mo # older events are deleted; the profile stays
+
+segments:
+  recount: 15m # every segment is counted in full this often (or nightly); people join and leave as they act in between
