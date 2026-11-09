@@ -1,6 +1,6 @@
 {
   "name": "@openasy/audience",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "OpenAsy Audience: one profile per person from every linked product, matched only by email, phone or your user id, with segments that stay up to date.",
   "license": "AGPL-3.0-only",

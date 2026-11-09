@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "OpenAsy Audience API",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "summary": "One profile per person from every linked product, and segments that stay up to date.",
     "description": "Every screen of Audience uses this API, and so can your scripts and the other products (ADR 0014). Within `/api/v1` changes are additive only; anything removed is deprecated first (ADR 0024). Errors use Problem Details (RFC 9457).\n\nPeople are matched only by email, phone number or your own user id, never by device fingerprints. How they are matched, the traits and the linked products are set in the product's file, never through the API. Every operation takes the session of a signed-in person or an API token, and names the role it needs (`x-openasy-role`: viewer, editor, admin; ADR 0003).\n\nThe webhook `erasure` is the call Audience makes to Forms, CRM and Messages when a person is deleted on request.\n\nSign-in, members and API tokens are under `/api/v1/auth`, provided by [@openasy/auth](https://github.com/openasy/auth#routes).",
     "license": {
