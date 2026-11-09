@@ -3,6 +3,7 @@ import { useAuth } from "@openasy/auth/react";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { api, MfaSetupRequired, Unauthorized, type Source, type TraitValue } from "./api.ts";
 import type { Key, T } from "./i18n.ts";
+import { viewerLocale } from "./i18n.ts";
 
 /** Data loading with the session; when it ends, the sign-in screen comes back. */
 export function useApi() {
@@ -55,9 +56,9 @@ export function Notice({ children, tone = "success" }: { children: ReactNode; to
   );
 }
 
-export const fmt = (n: number) => n.toLocaleString();
-export const time = (iso: string | null) => (iso ? new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "–");
-export const shortDay = (d: string) => new Date(`${d}T00:00:00Z`).toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" });
+export const fmt = (n: number) => n.toLocaleString(viewerLocale());
+export const time = (iso: string | null) => (iso ? new Date(iso).toLocaleString(viewerLocale(), { dateStyle: "medium", timeStyle: "short" }) : "–");
+export const shortDay = (d: string) => new Date(`${d}T00:00:00Z`).toLocaleDateString(viewerLocale(), { month: "short", day: "numeric", timeZone: "UTC" });
 export const traitText = (v: TraitValue | undefined) => (v === undefined ? "–" : String(v));
 
 export const SOURCE_TONE: Record<Source, "neutral" | "info" | "success" | "warning"> = {

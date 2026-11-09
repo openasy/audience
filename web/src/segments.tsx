@@ -660,7 +660,7 @@ export function SegmentsPage({ call, config, selected, onChange }: { call: Call;
                     type="button"
                     onClick={() => (setNotice(null), navigate(`/segments/${x.id}`))}
                     aria-current={x.id === id ? "true" : undefined}
-                    className={`flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left ${x.id === id ? "bg-accent-soft text-accent-text" : "text-fg hover:bg-canvas"}`}
+                    className={`flex w-full items-center justify-between gap-2 px-3 py-1.5 text-start ${x.id === id ? "bg-accent-soft text-accent-text" : "text-fg hover:bg-canvas"}`}
                   >
                     <span className="truncate text-sm font-medium">{x.name}</span>
                     <span className="shrink-0 font-mono text-2xs text-fg-muted tabular-nums">{fmt(x.size)}</span>

@@ -68,20 +68,20 @@ function MapColumns({ call, upload, config, onDone }: { call: Call; upload: Impo
     >
       <div className="flex flex-col gap-3">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="w-full text-start text-sm">
             <caption className="sr-only">{t("imports.columns")}</caption>
             <thead className="text-xs text-fg-muted">
               <tr>
-                <th className="py-1 pr-2 font-semibold">{t("imports.column")}</th>
-                <th className="py-1 pr-2 font-semibold">{t("imports.firstRow")}</th>
+                <th className="py-1 pe-2 font-semibold">{t("imports.column")}</th>
+                <th className="py-1 pe-2 font-semibold">{t("imports.firstRow")}</th>
                 <th className="py-1 font-semibold">{t("imports.goesTo")}</th>
               </tr>
             </thead>
             <tbody>
               {upload.columns.map((c) => (
                 <tr key={c.name} className="border-t border-line">
-                  <td className="py-1.5 pr-2 font-mono text-xs">{c.name}</td>
-                  <td className="audience-wrap py-1.5 pr-2 text-xs text-fg-muted">{c.sample}</td>
+                  <td className="py-1.5 pe-2 font-mono text-xs">{c.name}</td>
+                  <td className="audience-wrap py-1.5 pe-2 text-xs text-fg-muted">{c.sample}</td>
                   <td className="py-1.5">
                     <SelectField
                       aria-label={t("imports.goesToLabel", { column: c.name })}

@@ -9,3 +9,10 @@ export const useT = defineMessages("audience", { en, tr, de });
 export type T = ReturnType<typeof useT>;
 /** A message key built at run time, such as source.<id>; the messages test checks every language has them. */
 export type Key = Parameters<T>[0];
+
+let viewer = "en";
+/** The language picked in the top bar, for dates and numbers written outside React (ADR 0006). App sets it while rendering. */
+export const viewerLocale = (): string => viewer;
+export function setViewerLocale(locale: string): void {
+  viewer = locale;
+}
